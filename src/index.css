@@ -1,0 +1,14 @@
+@import "tailwindcss";
+:root {
+  font-family: 'Raleway', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --primary-font-family: 'Raleway', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --primary-color: #F85858;
+  overflow-x: hidden;
+  color: rgb(255, 255, 255);
+  background-color: #000;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
