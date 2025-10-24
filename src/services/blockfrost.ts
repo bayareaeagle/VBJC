@@ -39,6 +39,15 @@ export interface BlockfrostAssetInfo {
   metadata?: BlockfrostAssetMetadata;
 }
 
+// Helper function to convert IPFS URLs to HTTP URLs
+export const convertIpfsToHttp = (ipfsUrl: string): string => {
+  if (ipfsUrl.startsWith('ipfs://')) {
+    const ipfsHash = ipfsUrl.replace('ipfs://', '');
+    return `https://ipfs.io/ipfs/${ipfsHash}`;
+  }
+  return ipfsUrl;
+};
+
 // Helper function to make authenticated requests to Blockfrost
 const fetchWithAuth = async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
   if (!PROJECT_ID) {
@@ -77,7 +86,6 @@ export const getAssetInfo = async (unit: string): Promise<BlockfrostAssetInfo> =
     const response = await fetchWithAuth(`/assets/${unit}`);
     return await response.json();
   } catch (error) {
-    console.error('Error fetching asset info:', error);
     throw error;
   }
 };
@@ -89,7 +97,6 @@ export const getAssetMetadata = async (unit: string): Promise<BlockfrostAssetMet
     const assetInfo = await response.json();
     return assetInfo.metadata || {};
   } catch (error) {
-    console.error('Error fetching asset metadata:', error);
     return {};
   }
 };
@@ -100,7 +107,6 @@ export const getAllAssets = async (): Promise<BlockfrostAsset[]> => {
     const response = await fetchWithAuth(`/assets`);
     return await response.json();
   } catch (error) {
-    console.error('Error fetching all assets:', error);
     throw error;
   }
 };
@@ -125,7 +131,6 @@ export const getTopAssets = async (count: number = 9): Promise<BlockfrostAsset[]
     
     return sortedAssets;
   } catch (error) {
-    console.error('Error fetching top assets:', error);
     throw error;
   }
 };
@@ -140,10 +145,8 @@ export const getAssetDetails = async (unit: string): Promise<BlockfrostAssetInfo
     
     const response = await fetchWithAuth(`/assets/${unit}`);
     const data = await response.json();
-    console.log('Asset details response:', data);
     return data;
   } catch (error) {
-    console.error('Error fetching asset details:', error);
     throw error;
   }
 };
@@ -163,7 +166,6 @@ export const getTopAssetsWithDetails = async (count: number = 9): Promise<Blockf
         const details = await getAssetDetails(asset.unit);
         detailedAssets.push(details);
       } catch (error) {
-        console.warn(`Failed to fetch details for asset ${asset.unit}:`, error);
         // Skip this asset and continue with the next one
         continue;
       }
@@ -171,7 +173,6 @@ export const getTopAssetsWithDetails = async (count: number = 9): Promise<Blockf
     
     return detailedAssets;
   } catch (error) {
-    console.error('Error fetching top assets with details:', error);
     throw error;
   }
 };
@@ -183,7 +184,6 @@ export const searchAssets = async (): Promise<BlockfrostAsset[]> => {
     const allAssets = await getAllAssets();
     return allAssets;
   } catch (error) {
-    console.error('Error searching assets:', error);
     throw error;
   }
 };
@@ -194,7 +194,6 @@ export const getAssetsByUnits = async (units: string[]): Promise<BlockfrostAsset
     const promises = units.map(unit => getAssetInfo(unit));
     return await Promise.all(promises);
   } catch (error) {
-    console.error('Error fetching assets by units:', error);
     throw error;
   }
 };
@@ -205,7 +204,6 @@ export const getAssetsByAddresses = async (addresses: string[]): Promise<Blockfr
     const promises = addresses.map(address => getAssetDetails(address));
     return await Promise.all(promises);
   } catch (error) {
-    console.error('Error fetching assets by addresses:', error);
     throw error;
   }
 };
@@ -216,21 +214,31 @@ export const convertBlockfrostToCryptoAsset = (blockfrostAsset: BlockfrostAssetI
   amount?: string;
   icon: string;
   image: string;
+  chain: string;
   } => {
-  const symbol = blockfrostAsset.metadata?.ticker || blockfrostAsset.asset_name || blockfrostAsset.unit.slice(0, 8);
+  const symbol = blockfrostAsset.metadata?.ticker || 
+                blockfrostAsset.onchain_metadata?.symbol ||
+                blockfrostAsset.metadata?.name ||
+                blockfrostAsset.onchain_metadata?.name ||
+                blockfrostAsset.asset_name || 
+                blockfrostAsset.unit.slice(0, 8);
   // Handle base64 logo data - convert to data URL if it's base64
   let image = '';
-  if (blockfrostAsset.metadata?.logo) {
-    const logo = blockfrostAsset.metadata.logo;
+  let imageSource = blockfrostAsset.metadata?.logo || blockfrostAsset.onchain_metadata?.image;
+  
+  if (imageSource) {
     // Check if it's base64 data (starts with data: or is a long base64 string)
-    if (logo.startsWith('data:')) {
-      image = logo;
-    } else if (logo.length > 100 && /^[A-Za-z0-9+/=]+$/.test(logo)) {
+    if (imageSource.startsWith('data:')) {
+      image = imageSource;
+    } else if (imageSource.startsWith('ipfs://')) {
+      // Convert IPFS URL to HTTP URL using a public gateway
+      image = convertIpfsToHttp(imageSource);
+    } else if (imageSource.length > 100 && /^[A-Za-z0-9+/=]+$/.test(imageSource)) {
       // It's likely base64 data, create a data URL
-      image = `data:image/png;base64,${logo}`;
+      image = `data:image/png;base64,${imageSource}`;
     } else {
       // It's a regular URL
-      image = logo;
+      image = imageSource;
     }
   }
   
@@ -239,5 +247,87 @@ export const convertBlockfrostToCryptoAsset = (blockfrostAsset: BlockfrostAssetI
     amount: blockfrostAsset.quantity,
     icon: emojiIcon,
     image: image,
+    chain: 'cardano',
   };
+};
+
+// Function to fetch asset images for wallet assets
+export const fetchAssetImages = async (walletAssets: any[]): Promise<any[]> => {
+  try {
+    const assetsWithImages = await Promise.all(
+      walletAssets.map(async (asset) => {
+        try {
+          // Skip Cardano (lovelace) as it doesn't have metadata
+          if (asset.unit === 'lovelace') {
+            return {
+              ...asset,
+              image: '', // Cardano doesn't have an image
+              symbol: 'ADA',
+              icon: '₳',
+              chain: 'cardano'
+            };
+          }
+
+          // Fetch asset metadata from Blockfrost
+          const assetInfo = await getAssetDetails(asset.unit);
+          
+          // Extract image from metadata
+          let image = '';
+          let imageSource = assetInfo.metadata?.logo || assetInfo.onchain_metadata?.image;
+          
+          if (imageSource) {
+            // Check if it's base64 data (starts with data: or is a long base64 string)
+            if (imageSource.startsWith('data:')) {
+              image = imageSource;
+            } else if (imageSource.startsWith('ipfs://')) {
+              // Convert IPFS URL to HTTP URL using a public gateway
+              image = convertIpfsToHttp(imageSource);
+            } else if (imageSource.length > 100 && /^[A-Za-z0-9+/=]+$/.test(imageSource)) {
+              // It's likely base64 data, create a data URL
+              image = `data:image/png;base64,${imageSource}`;
+            } else {
+              // It's a regular URL
+              image = imageSource;
+            }
+          }
+
+          // Get symbol from metadata or use asset name
+          const symbol = assetInfo.metadata?.ticker || 
+                        assetInfo.onchain_metadata?.symbol ||
+                        assetInfo.metadata?.name || 
+                        assetInfo.onchain_metadata?.name ||
+                        assetInfo.asset_name || 
+                        asset.unit.slice(0, 8);
+
+          return {
+            ...asset,
+            image,
+            symbol,
+            icon: '🪙', // Default emoji icon as fallback
+            chain: 'cardano'
+          };
+        } catch (error) {
+          // Return asset with fallback data
+          return {
+            ...asset,
+            image: '',
+            symbol: asset.unit.slice(0, 8),
+            icon: '🪙',
+            chain: 'cardano'
+          };
+        }
+      })
+    );
+
+    return assetsWithImages;
+  } catch (error) {
+    // Return original assets with fallback data
+    return walletAssets.map(asset => ({
+      ...asset,
+      image: '',
+      symbol: asset.unit === 'lovelace' ? 'Cardano' : asset.unit.slice(0, 8),
+      icon: asset.unit === 'lovelace' ? '₳' : '🪙',
+      chain: 'cardano'
+    }));
+  }
 };

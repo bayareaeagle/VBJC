@@ -1,35 +1,22 @@
-import { useState, useEffect } from "react";
-import { useWalletList } from '@meshsdk/react';
-import { BrowserWallet } from '@meshsdk/core';
+import { useState } from "react";
 import Modal from './Modal';
+import { useWalletContext } from '../contexts/WalletContext';
 import logo from "../assets/vista-logo.png"
 
 const Navbar = () => {
-  const wallets = useWalletList();
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { walletAddress, isConnected, isConnecting, connectWallet, disconnectWallet, wallets } = useWalletContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  useEffect(() => {
-    setWalletAddress(localStorage.getItem('walletAddress'));
-  }, []);
 
   const openModal = () => {
     setIsModalOpen(true);
   };
 
-  const connectWallet = async (walletName: string) => {
+  const handleConnectWallet = async (walletName: string) => {
     try {
-      setIsConnecting(true);
-      const walletInstance = await BrowserWallet.enable(walletName);
-      const walletAddress = await walletInstance.walletInstance.getUsedAddresses();
-      localStorage.setItem('walletAddress', walletAddress[0]);
-      window.location.reload();
+      await connectWallet(walletName);
       setIsModalOpen(false);
     } catch (error) {
       console.error('Failed to connect wallet:', error);
-    } finally {
-      setIsConnecting(false);
     }
   };
   
@@ -44,20 +31,25 @@ const Navbar = () => {
             </div>
             <div className="flex gap-4">
 
-            <div className="bg-[#F85858] text-white px-6 py-2 rounded-full font-bold text-sm ">
-              <button onClick={openModal} disabled={isConnecting}>
-                {isConnecting ? 'Connecting...' : 'Launch App'}
-              </button>
-            </div>
-
-            {walletAddress && (
-              <div 
-                onClick={() => (localStorage.removeItem('walletAddress'), window.location.reload())} 
-                className="bg-[#666666] text-white px-6 py-2 rounded-full font-bold text-sm cursor-pointer hover:bg-[#555555] transition-colors"
-              >
-                Disconnect Wallet
+            {!isConnected ? (
+              <div className="bg-[#F85858] text-white px-6 py-2 rounded-full font-bold text-sm ">
+                <button onClick={openModal} disabled={isConnecting}>
+                  {isConnecting ? 'Connecting...' : 'Launch App'}
+                </button>
               </div>
-              )}
+            ) : (
+              <div className="flex gap-2">
+                <div className="bg-[#4CAF50] text-white px-4 py-2 rounded-full font-bold text-sm">
+                  {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+                </div>
+                <div 
+                  onClick={disconnectWallet} 
+                  className="bg-[#666666] text-white px-6 py-2 rounded-full font-bold text-sm cursor-pointer hover:bg-[#555555] transition-colors"
+                >
+                  Disconnect
+                </div>
+              </div>
+            )}
               </div>
         </div>
 
@@ -81,7 +73,7 @@ const Navbar = () => {
                         <img src={wallet.icon} alt={wallet.name} className="w-6 h-6" />
                         <h3 className="text-lg font-semibold text-white">{wallet.name}</h3>
                       </div>
-                      <button className="bg-[#F85858] text-white px-4 py-2 rounded-full font-bold" onClick={() => connectWallet(wallet.name)}>Connect</button>
+                      <button className="bg-[#F85858] text-white px-4 py-2 rounded-full font-bold" onClick={() => handleConnectWallet(wallet.name)}>Connect</button>
                     </div>
                   </div>
                 ))}
@@ -94,7 +86,7 @@ const Navbar = () => {
                   </svg>
                   <p className="text-lg font-medium text-white mb-2">No wallets detected</p>
                   <p className="text-gray-400">
-                    Please install a Cardano wallet like Nami, Eternl, Flint, or Typhon to use this feature.
+                    Please install a Cardano wallet.
                   </p>
                 </div>
               </div>
