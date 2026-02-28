@@ -34,7 +34,7 @@ const Navbar = () => {
             {!isConnected ? (
               <div className="bg-[#F85858] text-white px-6 py-2 rounded-full font-bold text-sm ">
                 <button onClick={openModal} disabled={isConnecting}>
-                  {isConnecting ? 'Connecting...' : 'Launch App'}
+                  {isConnecting ? 'Connecting...' : 'Connect Cardano'}
                 </button>
               </div>
             ) : (
@@ -57,7 +57,7 @@ const Navbar = () => {
         <Modal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title="Available Wallets"
+          title="Cardano Wallets"
           size="lg"
         >
           <div className="space-y-4">

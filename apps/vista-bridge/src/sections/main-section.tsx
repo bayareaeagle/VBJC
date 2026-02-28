@@ -4,7 +4,7 @@ import BridgeAssets from '../components/BridgeAssets';
 import backgroundImage from '../assets/background.png';
 
 const MainSection = () => {
-    const [fromChain, setFromChain] = useState<string>('');
+    const [fromChain, setFromChain] = useState<string>('bitcoin');
 
     return (
         <>
