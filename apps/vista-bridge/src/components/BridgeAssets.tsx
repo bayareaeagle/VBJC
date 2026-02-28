@@ -14,7 +14,7 @@ const BridgeAssets: React.FC<BridgeAssetsProps> = ({ onFromChainChange }) => {
   const { cryptoAssets } = useCryptoData();
   const { assets: walletAssets, isConnected, selectedAsset, setSelectedAsset } = useWalletContext();
   const [selectedPercentage, setSelectedPercentage] = useState('25%');
-  const [sendAmount, setSendAmount] = useState('');
+  const [, setSendAmount] = useState('');
   const [displayAmount, setDisplayAmount] = useState('');
   const [receiveAmount] = useState('162030');
   const [fromCrypto, setFromCrypto] = useState<CryptoAsset | null>(null);

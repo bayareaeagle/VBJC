@@ -1,45 +1,17 @@
 {
-  "name": "vista-app",
+  "name": "vbjc-monorepo",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
+  "description": "Unified VISTA Bridge ecosystem repository",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@meshsdk/core": "^1.7.20",
-    "@meshsdk/react": "^1.7.20",
-    "@tailwindcss/vite": "^4.1.13",
-    "buffer": "^6.0.3",
-    "crypto-browserify": "^3.12.1",
-    "events": "^3.3.0",
-    "process": "^0.11.10",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "stream-browserify": "^3.0.0",
-    "tailwindcss": "^4.1.13"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.33.0",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
-    "@vitejs/plugin-react": "^5.0.0",
-    "eslint": "^9.33.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "globals": "^16.3.0",
-    "typescript": "~5.8.3",
-    "typescript-eslint": "^8.39.1",
-    "vite": "^7.1.2",
-    "vite-plugin-node-polyfills": "^0.24.0",
-    "vite-plugin-top-level-await": "^1.6.0",
-    "vite-plugin-wasm": "^3.5.0"
-  },
-  "overrides": {
-    "libsodium-wrappers-sumo": "0.7.11",
-    "libsodium-sumo": "0.7.11"
+    "install:web": "npm --prefix ./apps/vista-bridge install",
+    "install:offchain": "npm --prefix ./services/bridge-offchain install",
+    "install:diagrams": "npm --prefix ./docs/design-docs/generate-diagrams install",
+    "install:all": "npm run install:web && npm run install:offchain && npm run install:diagrams",
+    "dev:web": "npm --prefix ./apps/vista-bridge run dev",
+    "dev:offchain": "npm --prefix ./services/bridge-offchain run dev",
+    "build:web": "npm --prefix ./apps/vista-bridge run build",
+    "build:offchain": "npm --prefix ./services/bridge-offchain run build",
+    "build:all": "npm run build:web && npm run build:offchain"
   }
 }
